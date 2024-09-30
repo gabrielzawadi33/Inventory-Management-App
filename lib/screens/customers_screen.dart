@@ -16,7 +16,7 @@ class MyApp extends StatelessWidget {
       create: (context) => CustomerProvider(),
       child: MaterialApp(
         title: 'Customer Management',
-        theme: ThemeData(primarySwatch: Colors.blue),
+        theme: ThemeData(primarySwatch: Colors.green),
         home: CustomerListScreen(),
       ),
     );
@@ -24,6 +24,7 @@ class MyApp extends StatelessWidget {
 }
 
 class CustomerListScreen extends StatefulWidget {
+  static const routeName = '/customers'; 
   @override
   _CustomerListScreenState createState() => _CustomerListScreenState();
 }

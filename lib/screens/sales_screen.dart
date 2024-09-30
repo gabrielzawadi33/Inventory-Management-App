@@ -1,98 +1,116 @@
-// sales_management_page.dart
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 
-import '../models/products.dart';
-import '../providers/sales_provider.dart';
-class SalesManagementPage extends StatelessWidget {
-  final TextEditingController _productIdController = TextEditingController();
+import '../helper/saleDb_Helper.dart';
+
+class SalesManagementPage extends StatefulWidget {
+  @override
+  _SalesManagementPageState createState() => _SalesManagementPageState();
+}
+
+class _SalesManagementPageState extends State<SalesManagementPage> {
+  final DatabaseHelper _dbHelper = DatabaseHelper();
   final TextEditingController _productNameController = TextEditingController();
-  final TextEditingController _productPriceController = TextEditingController();
+  final TextEditingController _priceController = TextEditingController();
+  List<Map<String, dynamic>> _sales = [];
+  double _totalPrice = 0.0;
+
+  @override
+  void initState() {
+    super.initState();
+    _refreshSales();
+  }
+
+  Future<void> _refreshSales() async {
+    _sales = await _dbHelper.getSales();
+    _totalPrice = await _dbHelper.getTotalPrice();
+    setState(() {});
+  }
+
+  Future<void> _addSale() async {
+    final String productName = _productNameController.text;
+    final double? price = double.tryParse(_priceController.text);
+
+    if (productName.isNotEmpty && price != null) {
+      await _dbHelper.insertSale(productName, price);
+      _productNameController.clear();
+      _priceController.clear();
+      _refreshSales();
+    }
+  }
+
+  Future<void> _deleteSale(int id) async {
+    await _dbHelper.deleteSale(id);
+    _refreshSales();
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: Text('Sales Management'),
-        actions: [
-          IconButton(
-            icon: Icon(Icons.sync),
-            onPressed: () {
-              Provider.of<SalesProvider>(context, listen: false).syncWithAPI();
-            },
+      ),
+      body: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _productNameController,
+                    decoration: InputDecoration(labelText: 'Product Name'),
+                  ),
+                ),
+                Expanded(
+                  child: TextField(
+                    controller: _priceController,
+                    keyboardType: TextInputType.number,
+                    decoration: InputDecoration(labelText: 'Price'),
+                  ),
+                ),
+                IconButton(
+                  icon: Icon(Icons.add),
+                  onPressed: _addSale,
+                ),
+              ],
+            ),
+          ),
+          Text('Total Price: \$${_totalPrice.toStringAsFixed(2)}'),
+          Expanded(
+            child: ListView.builder(
+              itemCount: _sales.length,
+              itemBuilder: (context, index) {
+                final sale = _sales[index];
+                return ListTile(
+                  title: Text(sale['productName']),
+                  subtitle: Text('\$${sale['price']}'),
+                  trailing: IconButton(
+                    icon: Icon(Icons.delete),
+                    onPressed: () => _deleteSale(sale['id']),
+                  ),
+                );
+              },
+            ),
           ),
         ],
       ),
-      body: Consumer<SalesProvider>(
-        builder: (context, salesProvider, child) {
-          return Column(
-            children: [
-              Expanded(
-                child: ListView.builder(
-                  itemCount: salesProvider.currentProducts.length,
-                  itemBuilder: (context, index) {
-                    final product = salesProvider.currentProducts[index];
-                    return ListTile(
-                      title: Text(product.name),
-                      subtitle: Text('Price: ${product.price}'),
-                      trailing: IconButton(
-                        icon: Icon(Icons.delete),
-                        onPressed: () {
-                          salesProvider.deleteProductFromSale(product.id);
-                        },
-                      ),
-                    );
-                  },
-                ),
-              ),
-              Text('Total Price: ${salesProvider.totalPrice}'),
-              Row(
-                children: [
-                  Expanded(
-                    child: TextField(
-                      controller: _productIdController,
-                      decoration: InputDecoration(labelText: 'Product ID'),
-                    ),
-                  ),
-                  Expanded(
-                    child: TextField(
-                      controller: _productNameController,
-                      decoration: InputDecoration(labelText: 'Product Name'),
-                    ),
-                  ),
-                  Expanded(
-                    child: TextField(
-                      controller: _productPriceController,
-                      decoration: InputDecoration(labelText: 'Product Price'),
-                      keyboardType: TextInputType.number,
-                    ),
-                  ),
-                  IconButton(
-                    icon: Icon(Icons.add),
-                    onPressed: () {
-                      final product = Product(
-                        id: _productIdController.text,
-                        name: _productNameController.text,
-                        price: double.tryParse(_productPriceController.text) ?? 0.0,
-                      );
-                      salesProvider.addProductToSale(product);
-                      _productIdController.clear();
-                      _productNameController.clear();
-                      _productPriceController.clear();
-                    },
-                  ),
-                ],
-              ),
-              ElevatedButton(
-                onPressed: () {
-                  salesProvider.finalizeSale();
-                },
-                child: Text('Finalize Sale'),
-              ),
-            ],
-          );
-        },
-      ),
+    );
+  }
+}
+
+
+
+void main() {
+  runApp(MyApp());
+}
+
+class MyApp extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      title: 'Sales Management',
+      theme: ThemeData(primarySwatch: Colors.blue),
+      home: SalesManagementPage(),
     );
   }
 }

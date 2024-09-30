@@ -1,7 +1,8 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
-import 'package:inventory_app/screens/HomePage.Dart';
+
+import 'screens/homeSreen.Dart';
 enum AuthMode { Signup, Login }
 
 class AuthScreen extends StatelessWidget {
@@ -24,7 +25,7 @@ class AuthScreen extends StatelessWidget {
                 gradient: LinearGradient(
                   colors: [
                     Colors.white,
-                    Colors.blueAccent[100]!,
+                    Colors.green[50]!,
                   ],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
@@ -48,7 +49,7 @@ class AuthScreen extends StatelessWidget {
                         ..translate(-10.0),
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(20),
-                        color: Colors.blue.withOpacity(0.5),
+                        color: Colors.green.withOpacity(0.5),
                         boxShadow: [
                           BoxShadow(
                             blurRadius: 8,
@@ -184,10 +185,7 @@ class _AuthCardState extends State<AuthCard> {
         if (_authMode == AuthMode.Login) {
 
            // Successfully logged in, navigate to the CustomerListScreen
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (context) =>HomePage()),
-        );
-
+        Navigator.of(context).pushReplacementNamed('/home');
 
           print('*******OK****${responseData}*');
         } else {
@@ -420,7 +418,7 @@ class _AuthCardState extends State<AuthCard> {
                   ElevatedButton(
                     child: Text(
                       _authMode == AuthMode.Login ? 'LOGIN' : 'REGISTER',
-                      style: TextStyle(color: Colors.white),
+                      style: TextStyle(color: Colors.green),
                     ),
                     onPressed: _submit,
                     style: ElevatedButton.styleFrom(
@@ -435,7 +433,7 @@ class _AuthCardState extends State<AuthCard> {
                   onPressed: _switchAuthMode,
                   child: Text(
                     '${_authMode == AuthMode.Login ? 'REGISTER' : 'LOGIN'}',
-                    style: TextStyle(color: Colors.blue[900]),
+                    style: TextStyle(color: Colors.green),
                   ),
                   style: TextButton.styleFrom(
                     padding: EdgeInsets.symmetric(horizontal: 30.0, vertical: 4),

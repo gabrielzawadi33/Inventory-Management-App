@@ -1,17 +1,11 @@
-// database_helper.dart
-import 'dart:async';
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
 
-import '../models/products.dart';
-
 class DatabaseHelper {
   static final DatabaseHelper _instance = DatabaseHelper._internal();
-  static Database? _database;
+  factory DatabaseHelper() => _instance;
 
-  factory DatabaseHelper() {
-    return _instance;
-  }
+  static Database? _database;
 
   DatabaseHelper._internal();
 
@@ -22,59 +16,44 @@ class DatabaseHelper {
   }
 
   Future<Database> _initDatabase() async {
-    String path = join(await getDatabasesPath(), 'sales_database.db');
+    String path = join(await getDatabasesPath(), 'sales.db');
     return await openDatabase(
       path,
       version: 1,
       onCreate: (db, version) async {
         await db.execute('''
-          CREATE TABLE sales (
+          CREATE TABLE sales(
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            product_id TEXT,
-            product_name TEXT,
-            product_price REAL
+            productName TEXT,
+            price REAL
           )
         ''');
       },
     );
   }
 
-  Future<void> insertSale(Product product) async {
+  Future<void> insertSale(String productName, double price) async {
     final db = await database;
     await db.insert(
       'sales',
-      {
-        'product_id': product.id,
-        'product_name': product.name,
-        'product_price': product.price,
-      },
+      {'productName': productName, 'price': price},
       conflictAlgorithm: ConflictAlgorithm.replace,
     );
   }
 
-  Future<List<Product>> getSales() async {
+  Future<List<Map<String, dynamic>>> getSales() async {
     final db = await database;
-    final List<Map<String, dynamic>> maps = await db.query('sales');
-    return List.generate(maps.length, (i) {
-      return Product(
-        id: maps[i]['product_id'],
-        name: maps[i]['product_name'],
-        price: maps[i]['product_price'],
-      );
-    });
+    return await db.query('sales');
   }
 
-  Future<void> deleteSale(String productId) async {
+  Future<void> deleteSale(int id) async {
     final db = await database;
-    await db.delete(
-      'sales',
-      where: 'product_id = ?',
-      whereArgs: [productId],
-    );
+    await db.delete('sales', where: 'id = ?', whereArgs: [id]);
   }
 
-  Future<void> clearSales() async {
+  Future<double> getTotalPrice() async {
     final db = await database;
-    await db.delete('sales');
+    final result = await db.rawQuery('SELECT SUM(price) AS total FROM sales');
+    return result.isNotEmpty ? result.first['total'] as double : 0.0;
   }
 }
