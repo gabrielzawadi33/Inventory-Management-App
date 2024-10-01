@@ -41,6 +41,7 @@ class DBHelper {
     final db = await database;
     await db.insert('customers', customerToMap(customer), conflictAlgorithm: ConflictAlgorithm.replace);
   }
+  
 
   Future<List<Customer>> getCustomers() async {
     final db = await database;

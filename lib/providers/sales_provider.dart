@@ -1,43 +1,203 @@
-// import 'package:flutter/material.dart';
-// import '../models/products.dart';
-// import '../helper/saleDb_Helper.dart';
+import 'package:flutter/material.dart';
+import '../helper/db_helper.dart';
+import '../helper/saleDb_Helper.dart';
+import '../models/customer_models.dart';
 
-// class SalesProvider with ChangeNotifier {
-//   List<Sale> _sales = [];
-//   List<Product> _currentProducts = [];
-//   final DatabaseHelper _dbHelper = DatabaseHelper();
+class SalesManagementPage extends StatefulWidget {
+  @override
+  _SalesManagementPageState createState() => _SalesManagementPageState();
+}
 
-//   List<Sale> get sales => _sales;
-//   List<Product> get currentProducts => _currentProducts;
+class _SalesManagementPageState extends State<SalesManagementPage> {
+  final DatabaseHelper _dbHelper = DatabaseHelper();
+  final DBHelper _customerDbHelper = DBHelper();
+  List<Map<String, dynamic>> _sales = [];
+  double _totalPrice = 0.0;
+  Map<String, double> _customerTotalPrices = {}; // To hold total prices by customer
 
-//   SalesProvider() {
-//     loadSales();
-//   }
+  // Dummy list of products with their prices
+  final List<Map<String, dynamic>> _products = [
+    {'name': 'Product A', 'price': 50.0},
+    {'name': 'Product B', 'price': 100.0},
+    {'name': 'Product C', 'price': 150.0},
+    {'name': 'Product D', 'price': 200.0},
+  ];
 
-//   Future<void> loadSales() async {
-//     _currentProducts = await _dbHelper.getSales();
-//     notifyListeners();
-//   }
+  List<String> _selectedProducts = []; // List to hold selected product names
+  String? _selectedCustomerId; // To store the selected customer's ID
+  List<Customer> _customers = []; // To hold customers from the database
 
-//   void addProductToSale(Product product) {
-//     _currentProducts.add(product);
-//     _dbHelper.insertSale(product); // Save to SQLite
-//     notifyListeners();
-//   }
+  @override
+  void initState() {
+    super.initState();
+    _refreshSales();
+    _fetchCustomers();
+  }
 
-//   void deleteProductFromSale(String productId) {
-//     _currentProducts.removeWhere((product) => product.id == productId);
-//     _dbHelper.deleteSale(productId); // Remove from SQLite
-//     notifyListeners();
-//   }
+  Future<void> _fetchCustomers() async {
+    _customers = await _customerDbHelper.getCustomers();
+    setState(() {});
+  }
 
-//   void finalizeSale() {
-//     if (_currentProducts.isNotEmpty) {
-//       _sales.add(Sale(products: List.from(_currentProducts))); // Create a new Sale
-//       _currentProducts.clear(); // Clear current products for the next sale
-//       notifyListeners();
-//     }
-//   }
+  Future<void> _refreshSales() async {
+    _sales = await _dbHelper.getSales();
+    _totalPrice = await _dbHelper.getTotalPrice();
+    _calculateCustomerTotalPrices(); // Calculate totals after refreshing sales
+    setState(() {});
+  }
 
-//   double get totalPrice => _currentProducts.fold(0, (total, product) => total + product.price);
-// }
+  void _calculateCustomerTotalPrices() {
+    _customerTotalPrices.clear(); // Clear previous totals
+    for (var sale in _sales) {
+      final customerId = sale['customerName'];
+      final price = sale['price'];
+
+      if (_customerTotalPrices.containsKey(customerId)) {
+        _customerTotalPrices[customerId] = _customerTotalPrices[customerId]! + price;
+      } else {
+        _customerTotalPrices[customerId] = price;
+      }
+    }
+  }
+
+  void _calculateTotalPrice() {
+    _totalPrice = 0.0;
+    for (var productName in _selectedProducts) {
+      final product = _products.firstWhere((product) => product['name'] == productName);
+      _totalPrice += product['price'];
+    }
+    setState(() {});
+  }
+
+  Future<void> _addSale() async {
+    if (_selectedProducts.isNotEmpty && _selectedCustomerId != null) {
+      for (var productName in _selectedProducts) {
+        final double? price = _products.firstWhere((product) => product['name'] == productName)['price'];
+        if (price != null) {
+          await _dbHelper.insertSaleWithCustomer(productName, price, _selectedCustomerId!);
+        }
+      }
+      _selectedProducts.clear();
+      _selectedCustomerId = null;
+      _refreshSales();
+    }
+  }
+
+  Future<void> _deleteSale(int id) async {
+    await _dbHelper.deleteSale(id);
+    _refreshSales();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text('Sales Management'),
+      ),
+      body: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: Column(
+              children: [
+                // Dropdown for selecting customers
+                _customers.isEmpty
+                    ? CircularProgressIndicator()
+                    : DropdownButton<String>(
+                        value: _selectedCustomerId,
+                        hint: Text('Select Customer'),
+                        isExpanded: true,
+                        items: _customers.map((customer) {
+                          return DropdownMenuItem<String>(
+                            value: customer.id,
+                            child: Text('${customer.name} (${customer.email})'),
+                          );
+                        }).toList(),
+                        onChanged: (String? newValue) {
+                          setState(() {
+                            _selectedCustomerId = newValue;
+                          });
+                        },
+                      ),
+                Column(
+                  children: [
+                    // Multi-select for products
+                    Text('Select Products:'),
+                    Wrap(
+                      spacing: 8.0,
+                      children: _products.map((product) {
+                        return ChoiceChip(
+                          label: Text(product['name']),
+                          selected: _selectedProducts.contains(product['name']),
+                          onSelected: (selected) {
+                            setState(() {
+                              if (selected) {
+                                _selectedProducts.add(product['name']);
+                              } else {
+                                _selectedProducts.remove(product['name']);
+                              }
+                              _calculateTotalPrice();
+                            });
+                          },
+                        );
+                      }).toList(),
+                    ),
+                  ],
+                ),
+                // Display total price
+                Text('Total Price: \$${_totalPrice.toStringAsFixed(2)}'),
+                // Button to confirm transaction
+                ElevatedButton(
+                  onPressed: _addSale,
+                  child: Text('Confirm Transaction'),
+                ),
+                // Show customer summary after confirming a transaction
+                SizedBox(height: 16), // Add space
+                Text('Transaction Summary by Customer:', style: TextStyle(fontWeight: FontWeight.bold)),
+                ..._customerTotalPrices.entries.map((entry) {
+                  return ListTile(
+                    title: Text(entry.key),
+                    trailing: Text('\$${entry.value.toStringAsFixed(2)}'),
+                  );
+                }).toList(),
+              ],
+            ),
+          ),
+          // Expanded ListView to show transactions
+          Expanded(
+            child: ListView.builder(
+              itemCount: _sales.length,
+              itemBuilder: (context, index) {
+                final sale = _sales[index];
+                return ListTile(
+                  title: Text(sale['productName']),
+                  subtitle: Text('Customer: ${sale['customerName']}\nPrice: \$${sale['price']}'),
+                  trailing: IconButton(
+                    icon: Icon(Icons.delete),
+                    onPressed: () => _deleteSale(sale['id']),
+                  ),
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+void main() {
+  runApp(MyApp());
+}
+
+class MyApp extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      title: 'Sales Management',
+      theme: ThemeData(primarySwatch: Colors.blue),
+      home: SalesManagementPage(),
+    );
+  }
+}
+

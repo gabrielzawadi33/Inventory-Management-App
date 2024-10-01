@@ -1,11 +1,10 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
 
-import 'screens/homeSreen.Dart';
-enum AuthMode { Signup, Login }
 
-class AuthScreen extends StatelessWidget {
+enum AuthMode { Signup, Login }class AuthScreen extends StatelessWidget {
   static const routeName = '/auth';
 
   @override
@@ -25,7 +24,7 @@ class AuthScreen extends StatelessWidget {
                 gradient: LinearGradient(
                   colors: [
                     Colors.white,
-                    Colors.green[50]!,
+                    Colors.green.withOpacity(0.5),
                   ],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
@@ -158,7 +157,21 @@ class _AuthCardState extends State<AuthCard> {
           }),
           headers: {"Content-Type": "application/json"},
         );
+
+        final responseData = json.decode(response.body);
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        // Store user data in SharedPreferences
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('user', json.encode(responseData['user']));
+        await prefs.setBool('isLoggedIn', true);
+        
+        Navigator.of(context).pushReplacementNamed('/home');
+      } else {
+        _showErrorDialog('Failed with status code: ${response.body}');
+      }
       } 
+
+
       else {  
         
         // User wants to sign up
