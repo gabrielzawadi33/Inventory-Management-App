@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
-import '../helper/db_helper.dart';
+import '../helper/customer_dbHelper.dart';
+import '../helper/product_database_Helper.dart';
 import '../helper/saleDb_Helper.dart';
 import '../helper/transaction.dart';
 import '../models/customer_models.dart';
 
 class SalesManagementPage extends StatefulWidget {
+  const SalesManagementPage({super.key});
+
   @override
   _SalesManagementPageState createState() => _SalesManagementPageState();
 }
@@ -12,20 +15,15 @@ class SalesManagementPage extends StatefulWidget {
 class _SalesManagementPageState extends State<SalesManagementPage> {
   final DatabaseHelper _dbHelper = DatabaseHelper();
   final DBHelper _customerDbHelper = DBHelper();
-  final TransactionDBHelper _transactionDbHelper = TransactionDBHelper(); // Create instance of transaction DB helper
+  final TransactionDBHelper _transactionDbHelper = TransactionDBHelper();
+  final ProductDBHelper _productDbHelper = ProductDBHelper();
 
   List<Map<String, dynamic>> _sales = [];
-  List<Map<String, dynamic>> _transactions = []; // List to hold transactions
+  List<Map<String, dynamic>> _transactions = [];
+  List<Map<String, dynamic>> _products = [];
   double _totalPrice = 0.0;
   Map<String, double> _customerTotalPrices = {};
   Map<String, List<Map<String, dynamic>>> _customerTransactions = {};
-
-  final List<Map<String, dynamic>> _products = [
-    {'name': 'Product A', 'price': 50.0},
-    {'name': 'Product B', 'price': 100.0},
-    {'name': 'Product C', 'price': 150.0},
-    {'name': 'Product D', 'price': 200.0},
-  ];
 
   List<String> _selectedProducts = [];
   String? _selectedCustomerId;
@@ -36,7 +34,8 @@ class _SalesManagementPageState extends State<SalesManagementPage> {
     super.initState();
     _refreshSales();
     _fetchCustomers();
-    _fetchTransactions(); // Fetch transactions on startup
+    _fetchTransactions();
+    _fetchProducts(); // Fetch products from the database
   }
 
   Future<void> _fetchCustomers() async {
@@ -45,7 +44,12 @@ class _SalesManagementPageState extends State<SalesManagementPage> {
   }
 
   Future<void> _fetchTransactions() async {
-    _transactions = await _transactionDbHelper.getTransactions(); // Fetch transactions from the DB
+    _transactions = await _transactionDbHelper.getTransactions();
+    setState(() {});
+  }
+
+  Future<void> _fetchProducts() async {
+    _products = await _productDbHelper.getProducts(); 
     setState(() {});
   }
 
@@ -86,17 +90,16 @@ class _SalesManagementPageState extends State<SalesManagementPage> {
 
   Future<void> _addSale() async {
     if (_selectedProducts.isNotEmpty && _selectedCustomerId != null) {
-      double totalTransactionPrice = 0.0; // Track the total price for the current transaction
+      double totalTransactionPrice = 0.0;
 
       for (var productName in _selectedProducts) {
         final double? price = _products.firstWhere((product) => product['name'] == productName)['price'];
         if (price != null) {
           await _dbHelper.insertSaleWithCustomer(productName, price, _selectedCustomerId!);
-          totalTransactionPrice += price; // Add price to the transaction total
+          totalTransactionPrice += price;
         }
       }
 
-      // Insert transaction into the transaction DB
       await _transactionDbHelper.insertTransaction(
         _customers.firstWhere((customer) => customer.id == _selectedCustomerId).name,
         _selectedProducts,
@@ -106,18 +109,14 @@ class _SalesManagementPageState extends State<SalesManagementPage> {
       _selectedProducts.clear();
       _selectedCustomerId = null;
       _refreshSales();
-      _fetchTransactions(); // Refresh transactions
+      _fetchTransactions();
     }
   }
 
-  Future<void> _deleteSale(int id) async {
-    await _dbHelper.deleteSale(id);
-    _refreshSales();
-  }
 
   Future<void> _deleteTransaction(int id) async {
     await _transactionDbHelper.deleteTransaction(id);
-    _fetchTransactions(); // Refresh transactions after deletion
+    _fetchTransactions();
   }
 
   void _showCustomerTransactions(BuildContext context, String customerName) {
@@ -156,7 +155,7 @@ class _SalesManagementPageState extends State<SalesManagementPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Sales Management'),
+        title: const Text('Sales Management'),
       ),
       body: Column(
         children: [
@@ -166,10 +165,10 @@ class _SalesManagementPageState extends State<SalesManagementPage> {
               child: Column(
                 children: [
                   _customers.isEmpty
-                      ? CircularProgressIndicator()
+                      ? const CircularProgressIndicator()
                       : DropdownButton<String>(
                           value: _selectedCustomerId,
-                          hint: Text('Select Customer'),
+                          hint: const Text('Select Customer'),
                           isExpanded: true,
                           items: _customers.map((customer) {
                             return DropdownMenuItem<String>(
@@ -185,39 +184,40 @@ class _SalesManagementPageState extends State<SalesManagementPage> {
                         ),
                   Column(
                     children: [
-                      Text('Select Products:'),
+                      const Text('Select Products:'),
                       Wrap(
                         spacing: 8.0,
-                        children: _products.map((product) {
-                          return ChoiceChip(
-                            label: Text(product['name']),
-                            selected: _selectedProducts.contains(product['name']),
-                            onSelected: (selected) {
-                              setState(() {
-                                if (selected) {
-                                  _selectedProducts.add(product['name']);
-                                } else {
-                                  _selectedProducts.remove(product['name']);
-                                }
-                              });
-                            },
-                          );
-                        }).toList(),
+                        children: _products.isEmpty
+                            ? [const CircularProgressIndicator()]
+                            : _products.map((product) {
+                                return ChoiceChip(
+                                  label: Text(product['name']),
+                                  selected: _selectedProducts.contains(product['name']),
+                                  onSelected: (selected) {
+                                    setState(() {
+                                      if (selected) {
+                                        _selectedProducts.add(product['name']);
+                                      } else {
+                                        _selectedProducts.remove(product['name']);
+                                      }
+                                    });
+                                  },
+                                );
+                              }).toList(),
                       ),
                     ],
                   ),
                   Text('Total Price: \$${_totalPrice.toStringAsFixed(2)}'),
                   ElevatedButton(
                     onPressed: _addSale,
-                    child: Text('Confirm Transaction'),
+                    child: const Text('Confirm Transaction'),
                   ),
-                  SizedBox(height: 8), // Reduced height for better spacing
-                  Text('Transaction Summary by Customer:', style: TextStyle(fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 8),
+                  const Text('Transaction Summary by Customer:', style: TextStyle(fontWeight: FontWeight.bold)),
                 ],
               ),
             ),
           ),
-          // List of transactions starts immediately after the summary text
           Expanded(
             child: ListView.builder(
               itemCount: _transactions.length,
@@ -228,7 +228,7 @@ class _SalesManagementPageState extends State<SalesManagementPage> {
                     title: Text('Customer: ${transaction['customerName']}'),
                     subtitle: Text('Products: ${transaction['productNames']}\nTotal: \$${transaction['totalPrice']}'),
                     trailing: IconButton(
-                      icon: Icon(Icons.delete),
+                      icon: const Icon(Icons.delete),
                       onPressed: () => _deleteTransaction(transaction['id']),
                     ),
                   ),
@@ -238,21 +238,6 @@ class _SalesManagementPageState extends State<SalesManagementPage> {
           ),
         ],
       ),
-    );
-  }
-}
-
-void main() {
-  runApp(MyApp());
-}
-
-class MyApp extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Sales Management',
-      theme: ThemeData(primarySwatch: Colors.blue),
-      home: SalesManagementPage(),
     );
   }
 }
