@@ -57,7 +57,7 @@ class MyApp extends StatelessWidget {
         title: 'Flutter Demo',
         theme: ThemeData(
             colorScheme: ColorScheme.fromSeed(seedColor: Colors.green[50]!)),
-        initialRoute: isLoggedIn ? '/home' : '/home',
+        initialRoute: isLoggedIn ? '/home' : '/auth',
         routes: {
           '/auth': (ctx) => AuthScreen(),
           '/customers': (ctx) => CustomerListScreen(),
