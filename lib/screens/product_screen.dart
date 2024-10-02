@@ -32,7 +32,7 @@ class ProductPage extends StatelessWidget {
                 elevation: 4,
                 child: ListTile(
                   title: Text(product.name),
-                  subtitle: Text('\$${product.price.toStringAsFixed(2)}'),
+                  subtitle: Text('\Tsh${product.price.toStringAsFixed(2)}'),
                   trailing: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
