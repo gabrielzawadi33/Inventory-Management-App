@@ -121,5 +121,4 @@ class ProductDBHelper {
     }
   }
 
-  // Add more helper methods if needed (like fetchProductById, etc.)
 }

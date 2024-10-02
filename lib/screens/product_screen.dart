@@ -1,5 +1,3 @@
-// screens/product_page.dart
-
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../models/products.dart';
@@ -29,25 +27,29 @@ class ProductPage extends StatelessWidget {
             itemCount: productProvider.products.length,
             itemBuilder: (context, index) {
               final product = productProvider.products[index];
-              return ListTile(
-                title: Text(product.name),
-                subtitle: Text('\$${product.price.toStringAsFixed(2)}'),
-                trailing: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    IconButton(
-                      icon: Icon(Icons.edit),
-                      onPressed: () {
-                        _showEditProductDialog(context, product);
-                      },
-                    ),
-                    IconButton(
-                      icon: Icon(Icons.delete),
-                      onPressed: () {
-                        productProvider.deleteProduct(product.id!);
-                      },
-                    ),
-                  ],
+              return Card(
+                color: Colors.green[50],
+                elevation: 4,
+                child: ListTile(
+                  title: Text(product.name),
+                  subtitle: Text('\$${product.price.toStringAsFixed(2)}'),
+                  trailing: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      IconButton(
+                        icon: Icon(Icons.edit),
+                        onPressed: () {
+                          _showEditProductDialog(context, product);
+                        },
+                      ),
+                      IconButton(
+                        icon: Icon(Icons.delete),
+                        onPressed: () {
+                          productProvider.deleteProduct(product.id!);
+                        },
+                      ),
+                    ],
+                  ),
                 ),
               );
             },

@@ -1,58 +1,59 @@
-// import 'dart:convert';
-// import 'package:http/http.dart' as http;
+import 'dart:convert';
+import 'package:connectivity_plus/connectivity_plus.dart';
+import 'package:http/http.dart' as http;
+import '../models/customer_models.dart';
 
-// import '../models/customer_models.dart';
+class CustomerService {
+  final String baseUrl = 'https://app.ema.co.tz/api/ema';
 
-// class ApiService {
-//   final String userId = '1012';
-  
-//   String get apiUrl => 'https://app.ema.co.tz/api/ema/pos/get_client/$userId/index';
+  Future<bool> hasInternetConnection() async {
+    var connectivityResult = await Connectivity().checkConnectivity();
+    return connectivityResult == ConnectivityResult.mobile ||
+        connectivityResult == ConnectivityResult.wifi;
+  }
 
-//   Future<List<Customer>> fetchCustomers() async {
-//     final response = await http.get(Uri.parse(apiUrl));
-//     if (response.statusCode == 200) {
-//       // Parse the response as a Map
-//       Map<String, dynamic> data = json.decode(response.body);
-      
-//       // Assuming the list of customers is under a field called 'customers' in the API response
-//       if (data.containsKey('customers')) {
-//         List<dynamic> customerList = data['customers'];
-//         return customerList.map((customer) => Customer.fromJson(customer)).toList();
-//       } else {
-//         throw Exception('Customers data not found in the response');
-//       }
-//     } else {
-//       throw Exception('Failed to load customers');
-//     }
-//   }
+  Future<void> syncCustomer(Customer customer) async {
+    if (await hasInternetConnection()) {
+      final url = Uri.parse('$baseUrl/get_client/${customer.userId}/save');
+      final response = await http.post(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({
+          'id': customer.userId,
+          'name': customer.name,
+          'email': customer.email,
+          'phone': customer.phone,
+          'TIN': customer.TIN,
+          'address': customer.address,
+        }),
+      );
 
-//   Future<void> addCustomer(Customer customer) async {
-//     await http.post(
-//       Uri.parse(apiUrl),
-//       headers: {'Content-Type': 'application/json'},
-//       body: json.encode({
-//         'name': customer.name,
-//         'email': customer.email,
-//         'phone': customer.phoneNumber,
-//       }),
-//     );
-//   }
+      if (response.statusCode == 200) {
+        print('Customer synced successfully');
+      } else {
+        print('Failed to sync customer');
+        throw Exception('Failed to sync customer data');
+      }
+    } else {
+      print('No internet connection. Cannot sync customer data.');
+    }
+  }
 
-//   Future<void> deleteCustomer(String id) async {
-//     final deleteUrl = 'https://app.ema.co.tz/api/ema/pos/get_client/$userId/delete/$id';
-//     await http.delete(Uri.parse(deleteUrl));
-//   }
+  Future<List<Customer>> fetchCustomers(String userId) async {
+    if (await hasInternetConnection()) {
+      final url = Uri.parse('$baseUrl/pos/get_client/$userId/index');
+      final response = await http.get(url);
 
-//   Future<void> updateCustomer(Customer customer) async {
-//     final updateUrl = 'https://app.ema.co.tz/api/ema/pos/get_client/$userId/update/${customer.id}';
-//     await http.put(
-//       Uri.parse(updateUrl),
-//       headers: {'Content-Type': 'application/json'},
-//       body: json.encode({
-//         'name': customer.name,
-//         'email': customer.email,
-//         'phone_number': customer.phoneNumber,
-//       }),
-//     );
-//   }
-// }
+      if (response.statusCode == 200) {
+        List<dynamic> data = jsonDecode(response.body);
+        return data.map((json) => Customer.fromJson(json)).toList();
+      } else {
+        throw Exception('Failed to load customers from server');
+      }
+    } else {
+      throw Exception('No internet connection');
+    }
+  }
+}

@@ -35,7 +35,7 @@ class _SalesManagementPageState extends State<SalesManagementPage> {
     _refreshSales();
     _fetchCustomers();
     _fetchTransactions();
-    _fetchProducts(); // Fetch products from the database
+    _fetchProducts();
   }
 
   Future<void> _fetchCustomers() async {
@@ -207,13 +207,12 @@ class _SalesManagementPageState extends State<SalesManagementPage> {
                       ),
                     ],
                   ),
-                  Text('Total Price: \$${_totalPrice.toStringAsFixed(2)}'),
                   ElevatedButton(
                     onPressed: _addSale,
                     child: const Text('Confirm Transaction'),
                   ),
                   const SizedBox(height: 8),
-                  const Text('Transaction Summary by Customer:', style: TextStyle(fontWeight: FontWeight.bold)),
+                  const Text('Sales List:', style: TextStyle(fontWeight: FontWeight.bold)),
                 ],
               ),
             ),
@@ -224,9 +223,10 @@ class _SalesManagementPageState extends State<SalesManagementPage> {
               itemBuilder: (context, index) {
                 final transaction = _transactions[index];
                 return Card(
+                  color: Colors.green[50],
                   child: ListTile(
-                    title: Text('Customer: ${transaction['customerName']}'),
-                    subtitle: Text('Products: ${transaction['productNames']}\nTotal: \$${transaction['totalPrice']}'),
+                    title: Text('Customer Name: ${transaction['customerName']}'),
+                    subtitle: Text('Products Sold: ${transaction['productNames']}\nTotal Price: \Tsh ${transaction['totalPrice']}'),
                     trailing: IconButton(
                       icon: const Icon(Icons.delete),
                       onPressed: () => _deleteTransaction(transaction['id']),

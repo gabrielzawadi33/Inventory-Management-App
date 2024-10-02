@@ -13,11 +13,10 @@ import 'screens/homeSreen.dart';
 
 void main() async {
   WidgetsFlutterBinding
-      .ensureInitialized(); // Ensure Flutter binding is initialized
+      .ensureInitialized(); 
   final prefs = await SharedPreferences.getInstance();
   final isLoggedIn = prefs.getBool('isLoggedIn') ?? false;
 
-  // Create an instance of MyApp and call printStoredData
   MyApp app = MyApp(isLoggedIn: isLoggedIn);
   await app.printStoredData();
 
@@ -58,7 +57,7 @@ class MyApp extends StatelessWidget {
         title: 'Flutter Demo',
         theme: ThemeData(
             colorScheme: ColorScheme.fromSeed(seedColor: Colors.green[50]!)),
-        initialRoute: isLoggedIn ? '/home' : '/auth', // Check login status
+        initialRoute: isLoggedIn ? '/home' : '/home',
         routes: {
           '/auth': (ctx) => AuthScreen(),
           '/customers': (ctx) => CustomerListScreen(),
